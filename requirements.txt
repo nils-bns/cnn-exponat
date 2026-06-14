@@ -1,0 +1,28 @@
+# CNN Visualisierung - Alle Dependencies
+# Python 3.12
+
+# ─────────────────────────────────────────────────────────────
+# Für CPU-only stattdessen: --index-url https://download.pytorch.org/whl/cpu
+# ─────────────────────────────────────────────────────────────
+--extra-index-url https://download.pytorch.org/whl/cu124
+torch==2.6.0
+torchvision==0.21.0
+
+# Numerics (Obergrenze, um Bleeding-Edge-Konflikte mit torch zu vermeiden)
+numpy>=1.26.0,<2.3
+
+# Computer Vision
+opencv-python>=4.8.0,<4.11
+
+# Visualization
+matplotlib>=3.8.0,<3.11
+
+# GUI Framework
+PyQt6>=6.6.0,<6.10
+
+# Testing
+pytest>=7.4.3,<9
+pytest-cov>=4.1.0
+
+# Type Checking
+mypy>=1.7.0,<1.16

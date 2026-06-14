@@ -1,0 +1,202 @@
+/*
+Zentrales QSS-Stylesheet mit Platzhaltern.
+Wird von StyleManager geladen und Platzhalter ersetzt.
+
+Platzhalter-Format: {variable_name}
+Z.B. {primary} wird durch #2196F3 ersetzt
+
+Selektor-Syntax: Type#objectName (Qt6 ID-Selektor fuer setObjectName)
+*/
+
+/* ============================================================================
+   Layer-Buttons (Visitor Mode + Admin Mode)
+   ============================================================================ */
+
+QPushButton#layer-button {
+    background-color: {primary};
+    color: {text_primary};
+    border: {button_border_width}px solid {primary_border};
+    border-radius: {button_radius}px;
+    padding: {button_padding}px;
+    font-family: {font_family};
+    font-size: {font_large}px;
+    font-weight: bold;
+}
+
+QPushButton#layer-button:hover {
+    background-color: {primary_hover};
+}
+
+QPushButton#layer-button:pressed {
+    background-color: {primary_pressed};
+}
+
+QPushButton#layer-button:checked {
+    background-color: {active};
+    border-color: {active_border};
+}
+
+QPushButton#layer-button:checked:hover {
+    background-color: {active_hover};
+}
+
+/* ============================================================================
+   Action-Buttons (Save, Delete, Add)
+   ============================================================================ */
+
+QPushButton#action-button-success {
+    background-color: {success};
+    color: {text_primary};
+    font-weight: bold;
+    border-radius: 3px;
+    padding: 8px 16px;
+}
+
+QPushButton#action-button-success:hover {
+    background-color: {success_hover};
+}
+
+QPushButton#action-button-danger {
+    background-color: {danger};
+    color: {text_primary};
+    font-weight: bold;
+    border-radius: 3px;
+    padding: 8px 16px;
+}
+
+QPushButton#action-button-danger:hover {
+    background-color: {danger_hover};
+}
+
+/* ============================================================================
+   Kamera-Display-Labels
+   ============================================================================ */
+
+QLabel#camera-display {
+    background-color: {background_dark};
+    color: {text_primary};
+    border: none;
+    font-family: {font_family};
+    font-size: {font_large}px;
+}
+
+/* ============================================================================
+   Info-Panel
+   ============================================================================ */
+
+QTextEdit#info-panel {
+    background-color: transparent;   /* paintEvent übernimmt den Hintergrund */
+    color: {text_primary};
+    border: none;
+    padding: 6px;
+    font-family: {font_family};
+    font-size: {font_medium}px;
+}
+
+/* ============================================================================
+   About-Widget (Visitor Mode)
+   ============================================================================ */
+
+QPushButton#about-icon-button {
+    background-color: transparent;
+    color: {about_text_color};
+    border: none;
+    padding: 6px;
+}
+
+QPushButton#about-icon-button:hover {
+    background-color: rgba(0, 0, 0, 30);
+    border: none;
+}
+
+QTextEdit#about-content {
+    background-color: transparent;
+    color: {about_text_color};
+    border: none;
+    padding: 10px;
+    font-family: {font_family};
+    font-size: {font_medium}px;
+}
+
+QWidget#about-content-container {
+    background-color: {about_bg_rgba};
+    border: {about_border_width}px solid {overlay_border_glow_rgba};
+    border-radius: {about_border_radius}px;
+}
+
+QLabel#about-page-indicator {
+    color: {about_text_color};
+    font-family: {font_family};
+    font-size: {font_small}px;
+    padding: 2px 6px;
+    background-color: transparent;
+}
+
+QPushButton#about-nav-button {
+    background-color: rgba(0, 0, 0, 40);
+    color: {about_text_color};
+    border: 1px solid rgba(0, 0, 0, 60);
+    border-radius: 3px;
+    font-family: {font_family};
+    font-size: {font_large}px;
+    font-weight: bold;
+}
+
+QPushButton#about-nav-button:hover {
+    background-color: rgba(0, 0, 0, 80);
+    border-color: {primary};
+    color: {about_text_color};
+}
+
+/* ============================================================================
+   Overlay-Labels (OutputRanking, GradCAM)
+   ============================================================================ */
+
+QLabel#overlay-title {
+    color: {text_primary};
+    font-family: {font_family};
+    font-size: {font_large}px;
+    font-weight: bold;
+    background: transparent;
+}
+
+QLabel#overlay-text {
+    color: {text_primary};
+    font-family: {font_family};
+    font-size: {font_medium}px;
+    background: transparent;
+}
+
+QLabel#title-text {
+    color: {title_text_color};
+    font-family: {font_family};
+    font-size: {title_text_font_size}px;
+    font-weight: bold;
+    background: transparent;
+}
+
+QLabel#gradcam-subtitle-text {
+    color: {title_text_color};
+    font-family: {font_family};
+    font-size: {gradcam_subtitle_font_size}px;
+    font-weight: bold;
+    background: transparent;
+}
+
+/* ============================================================================
+   Group-Boxes (Admin Mode)
+   ============================================================================ */
+
+QGroupBox {
+    font-weight: bold;
+    border: 1px solid {border_light};
+    border-radius: 5px;
+    margin-top: 10px;
+    padding-top: 10px;
+}
+
+QGroupBox::title {
+    subcontrol-origin: margin;
+    subcontrol-position: top left;
+    padding: 0 5px;
+}
