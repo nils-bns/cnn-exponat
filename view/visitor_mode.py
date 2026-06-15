@@ -38,6 +38,14 @@ _CURSOR_PATH = Path(__file__).parent / "media" / "icon" / "cursor.png"
 _CURSOR_CLICKED_PATH = Path(__file__).parent / "media" / "icon" / "cursor_clicked.png"
 
 
+# Steuert, fuer welche Layer Grad-CAM berechnet und angezeigt wird.
+# None  = Grad-CAM fuer ALLE verfuegbaren Layer (Default, gewuenschtes Verhalten).
+# Liste = Grad-CAM nur fuer diese Layer, z.B. ["layer3", "layer4"].
+# Diese eine Konstante ist die einzige Quelle der Wahrheit fuer Widget-Sichtbarkeit
+# (GradCAMWidget, GradCAMSubtitleWidget) UND Grad-CAM-Berechnung (CameraThread).
+GRADCAM_VISIBLE_LAYERS: list[str] | None = None
+
+
 class VisitorModeWidget(QWidget):
     """Widget fuer den Besuchermodus.
 
@@ -57,6 +65,7 @@ class VisitorModeWidget(QWidget):
         _info_panel: InfoPanel fuer Layer-Beschreibungen
         _about_widget: AboutWidget fuer About-Informationen
         _gradcam_widget: GradCAMWidget fuer GradCAM-Visualisierung
+        _gradcam_layers: Layer-Namen, fuer die Grad-CAM berechnet & angezeigt wird
         _title_text: TitleTextWidget fuer bilingualen Titel-Text
         _gradcam_subtitle: GradCAMSubtitleWidget fuer GradCAM-Untertitel
         _lang_toggle: QPushButton fuer Sprachwechsel
@@ -99,6 +108,16 @@ class VisitorModeWidget(QWidget):
         self._cursor_clicked: QCursor | None = None
         self._cursor_visible: bool = False
 
+        # Grad-CAM-Layer einmalig aufloesen (zentrale Quelle der Wahrheit):
+        # None -> alle verfuegbaren Layer, sonst die explizit konfigurierte Liste.
+        all_layers = self._facade.get_layer_names()
+        self._gradcam_layers: list[str] = (
+            GRADCAM_VISIBLE_LAYERS
+            if GRADCAM_VISIBLE_LAYERS is not None
+            else all_layers
+        )
+        logger.info(f"Grad-CAM aktiv fuer Layer: {self._gradcam_layers}")
+
         self._init_ui()
 
         logger.info("VisitorModeWidget initialisiert")
@@ -137,14 +156,13 @@ class VisitorModeWidget(QWidget):
         self._output_ranking = OutputRankingWidget(self)
 
         # GradCAM-Widget (Overlay-Position wird in resizeEvent gesetzt)
-        last_two_layers = self._facade.get_layer_names()[-2:]
         self._gradcam_widget = GradCAMWidget(
-            visible_layers=last_two_layers, parent=self
+            visible_layers=self._gradcam_layers, parent=self
         )
 
         # GradCAM-Subtitle-Widget (Overlay-Position wird in resizeEvent gesetzt)
         self._gradcam_subtitle = GradCAMSubtitleWidget(
-            visible_layers=last_two_layers, parent=self
+            visible_layers=self._gradcam_layers, parent=self
         )
 
         # Title-Text-Widget (Overlay-Position wird in resizeEvent gesetzt)
@@ -476,7 +494,7 @@ class VisitorModeWidget(QWidget):
         self._camera_thread.predictions_ready.connect(self._output_ranking.update_predictions)
         self._camera_thread.gradcam_ready.connect(self._gradcam_widget.update_frame)
         self._camera_thread.error_occurred.connect(self._on_error_occurred)
-        self._camera_thread.set_gradcam_layers(self._facade.get_layer_names()[-2:])
+        self._camera_thread.set_gradcam_layers(self._gradcam_layers)
         self._camera_thread.start()
 
     def stop(self) -> None:
