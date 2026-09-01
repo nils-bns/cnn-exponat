@@ -15,6 +15,14 @@ class ICameraService(Protocol):
         """Stoppt die Kamera und gibt Ressourcen frei."""
         ...
 
+    def reconnect(self) -> bool:
+        """Gibt die Kamera frei und öffnet sie neu.
+
+        Returns:
+            True bei erfolgreichem Neu-Öffnen, sonst False.
+        """
+        ...
+
     def get_frame(self) -> np.ndarray:
         """Holt aktuellen Frame von der Kamera.
 

@@ -32,6 +32,12 @@ from view.styles import (
 
 logger = logging.getLogger(__name__)
 
+# Zweisprachiger Hinweistext während der Kamera-Wiederverbindung
+_RECONNECT_TEXT = {
+    "de": "Kamera wird verbunden…",
+    "en": "Connecting camera…",
+}
+
 _LANG_ICON_PATH = Path(__file__).parent / "media" / "icon" / "lang_flag.png"
 _FRAME_PATH = Path(__file__).parent / "media" / "img" / "bg0.png"
 _CURSOR_PATH = Path(__file__).parent / "media" / "icon" / "cursor.png"
@@ -83,6 +89,7 @@ class VisitorModeWidget(QWidget):
 
         self._facade = facade
         self._camera_thread: CameraThread | None = None
+        self._camera_reconnecting: bool = False
 
         # Dynamisch ersten Layer aus Facade holen (nicht hardcoded)
         layer_names = facade.get_layer_names()
@@ -196,6 +203,16 @@ class VisitorModeWidget(QWidget):
 
         # Initial: Layer-Info aktualisieren
         self._update_layer_info(self._current_layer)
+
+        # Initiale Sichtbarkeit der Grad-CAM-Widgets mit dem Start-Layer
+        # synchronisieren, damit Grad-CAM bereits beim Kaltstart (z.B. conv1)
+        # sichtbar ist – nicht erst nach dem ersten manuellen Layer-Wechsel.
+        # set_current_layer() respektiert dabei GRADCAM_VISIBLE_LAYERS, da die
+        # Widgets nur bei layer_name in visible_layers sichtbar werden.
+        if self._gradcam_widget:
+            self._gradcam_widget.set_current_layer(self._current_layer)
+        if self._gradcam_subtitle:
+            self._gradcam_subtitle.set_current_layer(self._current_layer)
 
         # Overlay-Positionierung
         self._position_overlays()
@@ -439,6 +456,10 @@ class VisitorModeWidget(QWidget):
         # Layer-Info aktualisieren (InfoPanel wird via set_content gesteuert)
         self._update_layer_info(self._current_layer)
 
+        # Reconnect-Hinweis in neuer Sprache aktualisieren, falls gerade aktiv
+        if self._camera_reconnecting:
+            self._camera_display.setText(_RECONNECT_TEXT[self._language])
+
         # MainWindow benachrichtigen (App-Titel)
         self.language_changed.emit(self._language)
 
@@ -477,6 +498,24 @@ class VisitorModeWidget(QWidget):
         logger.error(f"Fehler in CameraThread: {error_msg}")
         self._camera_display.setText(f"Fehler:\n{error_msg}")
 
+    @pyqtSlot(str)
+    def _on_camera_lost(self, reason: str) -> None:
+        """Zeigt den Reconnect-Hinweis, während die Kamera neu verbunden wird.
+
+        Args:
+            reason: Grund des Verbindungsverlusts (für Logging).
+        """
+        logger.warning("Kamera verloren, zeige Reconnect-Hinweis: %s", reason)
+        self._camera_reconnecting = True
+        self._camera_display.setText(_RECONNECT_TEXT[self._language])
+
+    @pyqtSlot()
+    def _on_camera_restored(self) -> None:
+        """Beendet den Reconnect-Hinweis; Live-Frames laufen automatisch weiter."""
+        logger.info("Kamera wiederhergestellt")
+        self._camera_reconnecting = False
+        # Kein setText nötig: der nächste frame_ready → update_frame ersetzt den Text
+
     def start(self) -> None:
         """Startet den Besuchermodus (CameraThread)."""
         if self._camera_thread and self._camera_thread.is_running:
@@ -494,6 +533,8 @@ class VisitorModeWidget(QWidget):
         self._camera_thread.predictions_ready.connect(self._output_ranking.update_predictions)
         self._camera_thread.gradcam_ready.connect(self._gradcam_widget.update_frame)
         self._camera_thread.error_occurred.connect(self._on_error_occurred)
+        self._camera_thread.camera_lost.connect(self._on_camera_lost)
+        self._camera_thread.camera_restored.connect(self._on_camera_restored)
         self._camera_thread.set_gradcam_layers(self._gradcam_layers)
         self._camera_thread.start()
 

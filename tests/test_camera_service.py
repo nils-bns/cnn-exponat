@@ -15,6 +15,7 @@ class TestCameraService:
         """Test: Initialisierung mit Default-Index."""
         service = CameraService()
         assert service._camera_index == CameraService.DEFAULT_CAMERA_INDEX
+        assert service._flip_horizontal == CameraService.DEFAULT_FLIP_HORIZONTAL
         assert service._running is False
         assert service._camera is None
 
@@ -23,6 +24,11 @@ class TestCameraService:
         service = CameraService(camera_index=1)
         assert service._camera_index == 1
         assert service._running is False
+
+    def test_init_with_flip_horizontal_disabled(self):
+        """Test: Initialisierung mit deaktivierter Spiegelung."""
+        service = CameraService(flip_horizontal=False)
+        assert service._flip_horizontal is False
 
     @patch('cv2.VideoCapture')
     def test_start_success(self, mock_video_capture):
@@ -105,9 +111,9 @@ class TestCameraService:
 
     @patch('cv2.cvtColor')
     def test_get_frame_success(self, mock_cvtColor):
-        """Test: Erfolgreicher Frame-Abruf."""
+        """Test: Erfolgreicher Frame-Abruf (ohne Spiegelung, isolierter Test)."""
         # Arrange
-        service = CameraService()
+        service = CameraService(flip_horizontal=False)
         service._running = True
 
         mock_camera = MagicMock()
@@ -125,6 +131,54 @@ class TestCameraService:
         assert frame is dummy_frame_rgb
         mock_camera.read.assert_called_once()
         mock_cvtColor.assert_called_once()
+
+    @patch('cv2.flip')
+    @patch('cv2.cvtColor')
+    def test_get_frame_applies_horizontal_flip_by_default(self, mock_cvtColor, mock_flip):
+        """Test: get_frame spiegelt Frame horizontal, wenn flip_horizontal=True (Default)."""
+        # Arrange
+        service = CameraService()
+        service._running = True
+
+        mock_camera = MagicMock()
+        dummy_frame_bgr = np.zeros((480, 640, 3), dtype=np.uint8)
+        dummy_frame_rgb = np.ones((480, 640, 3), dtype=np.uint8)
+        dummy_frame_flipped = np.full((480, 640, 3), 2, dtype=np.uint8)
+
+        mock_camera.read.return_value = (True, dummy_frame_bgr)
+        mock_cvtColor.return_value = dummy_frame_rgb
+        mock_flip.return_value = dummy_frame_flipped
+        service._camera = mock_camera
+
+        # Act
+        frame = service.get_frame()
+
+        # Assert
+        assert frame is dummy_frame_flipped
+        mock_flip.assert_called_once_with(dummy_frame_rgb, 1)
+
+    @patch('cv2.flip')
+    @patch('cv2.cvtColor')
+    def test_get_frame_skips_flip_when_disabled(self, mock_cvtColor, mock_flip):
+        """Test: get_frame spiegelt NICHT, wenn flip_horizontal=False."""
+        # Arrange
+        service = CameraService(flip_horizontal=False)
+        service._running = True
+
+        mock_camera = MagicMock()
+        dummy_frame_bgr = np.zeros((480, 640, 3), dtype=np.uint8)
+        dummy_frame_rgb = np.ones((480, 640, 3), dtype=np.uint8)
+
+        mock_camera.read.return_value = (True, dummy_frame_bgr)
+        mock_cvtColor.return_value = dummy_frame_rgb
+        service._camera = mock_camera
+
+        # Act
+        frame = service.get_frame()
+
+        # Assert
+        assert frame is dummy_frame_rgb
+        mock_flip.assert_not_called()
 
     def test_get_frame_not_running(self):
         """Test: Frame-Abruf wenn Kamera nicht läuft."""
@@ -159,4 +213,50 @@ class TestCameraService:
 
         service._running = True
         assert service.is_running() is True
+
+    @patch('cv2.VideoCapture')
+    def test_reconnect_success(self, mock_video_capture):
+        """Test: Erfolgreicher Reconnect gibt True zurück."""
+        mock_camera = MagicMock()
+        mock_camera.isOpened.return_value = True
+        mock_video_capture.return_value = mock_camera
+
+        service = CameraService()
+        service.start()  # initialer Start
+
+        result = service.reconnect()
+
+        assert result is True
+        assert service._running is True
+
+    @patch('cv2.VideoCapture')
+    def test_reconnect_device_unavailable(self, mock_video_capture):
+        """Test: Reconnect gibt False zurück, wenn Gerät fehlt."""
+        mock_camera = MagicMock()
+        mock_camera.isOpened.return_value = False
+        mock_video_capture.return_value = mock_camera
+
+        service = CameraService()
+
+        result = service.reconnect()
+
+        assert result is False
+        assert service._running is False
+
+    @patch('cv2.VideoCapture')
+    def test_reconnect_releases_old_handle(self, mock_video_capture):
+        """Test: Reconnect gibt altes Kamera-Handle frei."""
+        old_camera = MagicMock()
+        old_camera.isOpened.return_value = True
+        new_camera = MagicMock()
+        new_camera.isOpened.return_value = True
+        mock_video_capture.side_effect = [old_camera, new_camera]
+
+        service = CameraService()
+        service.start()          # öffnet old_camera
+
+        service.reconnect()      # soll old_camera.release() aufrufen
+
+        old_camera.release.assert_called_once()
+        assert service._camera is new_camera
 
