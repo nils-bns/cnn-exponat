@@ -9,6 +9,7 @@ from core.interfaces import (
     IPresetService
 )
 from core.models import PresetConfig
+from core.exceptions import CameraError
 
 
 logger = logging.getLogger(__name__)
@@ -49,7 +50,6 @@ class ApplicationFacade:
 
         Raises:
             ModelLoadError: Wenn Modell nicht geladen werden kann
-            CameraNotAvailableError: Wenn Kamera nicht verfügbar
         """
         logger.info("Initialisiere ApplicationFacade...")
 
@@ -57,9 +57,16 @@ class ApplicationFacade:
         self._model.load_model()
         logger.info("Model geladen")
 
-        # Starte Kamera
-        self._camera.start()
-        logger.info("Kamera gestartet")
+        # Starte Kamera (nicht-fatal: fehlt sie beim Start, verbindet der
+        # CameraThread im Betrieb selbstständig neu — die App läuft weiter)
+        try:
+            self._camera.start()
+            logger.info("Kamera gestartet")
+        except CameraError as e:
+            logger.warning(
+                "Kamera beim Start nicht verfügbar – Reconnect erfolgt im "
+                "Betrieb: %s", e
+            )
 
         # Setze initialen Layer
         layers = self.get_layer_names()
@@ -68,6 +75,17 @@ class ApplicationFacade:
             logger.info(f"Initialer Layer: {self._current_layer}")
 
         logger.info("ApplicationFacade erfolgreich initialisiert")
+
+    def reconnect_camera(self) -> bool:
+        """Versucht die Kamera neu zu verbinden.
+
+        Delegiert an den CameraService. Wird vom CameraThread in der
+        Reconnect-Schleife aufgerufen (Single Entry Point: View → Facade → Service).
+
+        Returns:
+            True bei erfolgreichem Neu-Verbinden, sonst False.
+        """
+        return self._camera.reconnect()
 
     def get_visualization_for_layer(self, layer_name: str) -> np.ndarray:
         """Kompletter Workflow: Frame holen → Inferenz → Visualisierung.

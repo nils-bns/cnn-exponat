@@ -7,7 +7,7 @@ from unittest.mock import Mock
 
 from core.facade import ApplicationFacade
 from core.models import PresetConfig
-from core.exceptions import CameraFrameError
+from core.exceptions import CameraFrameError, CameraNotAvailableError
 
 
 class TestApplicationFacadeInitialization:
@@ -59,6 +59,49 @@ class TestApplicationFacadeInitialization:
         mock_model.load_model.assert_called_once()
         mock_camera.start.assert_called_once()
         assert facade._current_layer == 'layer1'
+
+    def test_initialize_survives_missing_camera(self):
+        """Test: initialize() wirft nicht, wenn Kamera-Start fehlschlägt (F2)."""
+        # Arrange
+        mock_camera = Mock()
+        mock_camera.start.side_effect = CameraNotAvailableError("keine Kamera")
+        mock_model = Mock()
+        mock_model.get_layer_names.return_value = ['layer1', 'layer2']
+        mock_visualization = Mock()
+        mock_presets = Mock()
+
+        facade = ApplicationFacade(
+            camera=mock_camera,
+            model=mock_model,
+            visualization=mock_visualization,
+            presets=mock_presets
+        )
+
+        # Act — darf NICHT werfen
+        facade.initialize()
+
+        # Assert — Model + Layer-Setup trotzdem ausgeführt
+        mock_model.load_model.assert_called_once()
+        assert facade._current_layer == 'layer1'
+
+    def test_reconnect_camera_delegates_to_service(self):
+        """Test: Facade.reconnect_camera() delegiert an CameraService."""
+        # Arrange
+        mock_camera = Mock()
+        mock_camera.reconnect.return_value = True
+        facade = ApplicationFacade(
+            camera=mock_camera,
+            model=Mock(),
+            visualization=Mock(),
+            presets=Mock()
+        )
+
+        # Act
+        result = facade.reconnect_camera()
+
+        # Assert
+        assert result is True
+        mock_camera.reconnect.assert_called_once()
 
     def test_initialize_sets_first_layer_as_current(self):
         """Test: initialize() setzt ersten Layer als aktuell."""

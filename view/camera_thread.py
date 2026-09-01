@@ -36,10 +36,15 @@ class CameraThread(QThread):
     predictions_ready = pyqtSignal(list)
     gradcam_ready = pyqtSignal(np.ndarray)
     error_occurred = pyqtSignal(str)
+    camera_lost = pyqtSignal(str)       # Verbindungsverlust (Grund als Text)
+    camera_restored = pyqtSignal()      # Kamera wieder verfügbar
 
     # Throttling-Intervalle
     PREDICTIONS_INTERVAL_S = 1.0
     GRADCAM_INTERVAL_S = 1/30
+
+    # Reconnect
+    RECONNECT_INTERVAL_S = 1.0          # fester 1-s-Takt
 
     def __init__(
         self,
@@ -73,9 +78,6 @@ class CameraThread(QThread):
         """
         self._running = True
         logger.info("CameraThread gestartet")
-
-        consecutive_errors = 0
-        max_consecutive_errors = 5
 
         while self._running:
             if self._paused:
@@ -118,24 +120,15 @@ class CameraThread(QThread):
                     except Exception as e:
                         logger.warning("GradCAM-Fehler: %s", e)
 
-                # Error-Counter zurücksetzen
-                consecutive_errors = 0
-
                 # Kurze Pause (30 FPS)
                 time.sleep(1.0 / 30.0)
 
             except CameraError as e:
-                consecutive_errors += 1
-                logger.warning(f"Kamera-Fehler: {e} (#{consecutive_errors})")
-
-                if consecutive_errors >= max_consecutive_errors:
-                    error_msg = f"Kamera nicht verfügbar: {e}"
-                    self.error_occurred.emit(error_msg)
-                    logger.error(f"Zu viele aufeinanderfolgende Fehler, stoppe Thread")
-                    self._running = False
-                else:
-                    # Kurz warten vor erneutem Versuch
-                    time.sleep(0.5)
+                # Verbindungsverlust: NICHT aufgeben, sondern dauerhaft neu
+                # verbinden (F1). Der Thread bleibt am Leben.
+                logger.warning("Kamera-Verbindung verloren: %s", e)
+                self.camera_lost.emit(str(e))
+                self._reconnect_camera_blocking()
 
             except Exception as e:
                 logger.error(f"Unerwarteter Fehler in CameraThread: {e}", exc_info=True)
@@ -144,6 +137,35 @@ class CameraThread(QThread):
                 time.sleep(0.5)
 
         logger.info("CameraThread beendet")
+
+    def _reconnect_camera_blocking(self) -> None:
+        """Verbindet die Kamera dauerhaft neu, bis Erfolg oder Stop.
+
+        Läuft im festen 1-s-Takt (RECONNECT_INTERVAL_S). Bricht sofort ab,
+        wenn der Thread gestoppt wird (`_running == False`). Bei Erfolg wird
+        `camera_restored` emittiert und normal weitergearbeitet.
+        """
+        while self._running:
+            if self._facade.reconnect_camera():
+                logger.info("Kamera erfolgreich wiederverbunden")
+                self.camera_restored.emit()
+                return
+            self._interruptible_sleep(self.RECONNECT_INTERVAL_S)
+
+    def _interruptible_sleep(self, seconds: float) -> None:
+        """Schläft in 0,1-s-Schritten und bricht bei Stop sofort ab.
+
+        Verhindert, dass `stop()` während der Reconnect-Pause bis zu einer
+        vollen Sekunde blockiert (responsives Thread-Ende).
+
+        Args:
+            seconds: Gesamtdauer der Pause in Sekunden.
+        """
+        steps = max(1, int(seconds / 0.1))
+        for _ in range(steps):
+            if not self._running:
+                return
+            time.sleep(0.1)
 
     def stop(self) -> None:
         """Stoppt den Thread gracefully."""
