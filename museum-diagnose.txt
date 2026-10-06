@@ -1,0 +1,24 @@
+== STATUS ==
+On branch main
+Your branch is up to date with 'origin/main'.
+
+Changes to be committed:
+  (use "git restore --staged <file>..." to unstage)
+	new file:   start.sh
+	modified:   view/camera_thread.py
+	modified:   view/styles/dimensions.py
+	modified:   view/visitor_mode.py
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	museum-diagnose.txt
+
+
+== LOG ==
+f5663d0 Initial commit
+
+== REFLOG ==
+f5663d0 HEAD@{0}: reset: moving to HEAD
+f5663d0 HEAD@{1}: clone: from https://github.com/nils-bns/cnn-exponat.git
+
+== FSCK ==

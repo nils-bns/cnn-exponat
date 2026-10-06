@@ -39,7 +39,7 @@ class CameraThread(QThread):
 
     # Throttling-Intervalle
     PREDICTIONS_INTERVAL_S = 1.0
-    GRADCAM_INTERVAL_S = 1/30
+    GRADCAM_INTERVAL_S = 1/40
 
     def __init__(
         self,
