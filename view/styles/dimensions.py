@@ -66,7 +66,7 @@ OVERLAY_DIMS = OverlayDimensions()
 class InfoPanelDimensions:
     """Dimensionen fuer das Info-Panel im Visitor Mode."""
     width: int = 300
-    height: int = 340
+    height: int = 365
     margin_right: int = 100
     margin_top: int = 200
     border_radius: int = 8         # Cyberpunk-Abrundung
@@ -84,7 +84,7 @@ INFO_PANEL_DIMS = InfoPanelDimensions()
 class AboutWidgetDimensions:
     """Dimensionen fuer das About-Widget im Visitor Mode."""
     # Icon-Button
-    icon_size: int = 55
+    icon_size: int = 60
 
     # Content-Bereich
     content_width: int = 300
@@ -167,7 +167,7 @@ class IconBarDimensions:
     chamfer: int = 10
 
     # Flaggen-/Sprach-Icon-Groesse (entkoppelt vom About-Icon)
-    flag_icon_size: int = 55
+    flag_icon_size: int = 45
 
 # Singleton-Instanz
 ICON_BAR_DIMS = IconBarDimensions()

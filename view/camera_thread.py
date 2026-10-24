@@ -41,7 +41,7 @@ class CameraThread(QThread):
 
     # Throttling-Intervalle
     PREDICTIONS_INTERVAL_S = 1.0
-    GRADCAM_INTERVAL_S = 1/30
+    GRADCAM_INTERVAL_S = 1/40
 
     # Reconnect
     RECONNECT_INTERVAL_S = 1.0          # fester 1-s-Takt
